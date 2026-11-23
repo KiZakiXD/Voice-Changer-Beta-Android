@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#6c4cf1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>Voice-Changer-Beta-Android v1</title>
+<script src="https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, sans-serif; background:#0b0b12; color:#f2f2f7; padding:20px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  p.sub { color:#9a9ab0; margin:0 0 20px; font-size:14px; }
+  .card { background:#171722; border:1px solid #2a2a3d; border-radius:16px; padding:16px; margin-bottom:14px; }
+  .preset { display:flex; flex-wrap:wrap; gap:8px; }
+  button { border:0; border-radius:999px; padding:10px 14px; font-size:14px; font-weight:600; cursor:pointer; background:#2a2a3d; color:#fff; }
+  button.active { background:#ff4d8d; }
+  button.primary { background:#ff4d8d; width:100%; padding:14px; font-size:16px; }
+  button.primary.stop { background:#444; }
+  label { display:block; font-size:13px; color:#9a9ab0; margin:14px 0 6px; }
+  input[type=range] { width:100%; }
+  .val { color:#fff; font-weight:700; }
+  .warn { background:#2a1a1a; border:1px solid #5a2a2a; color:#ffb3b3; border-radius:12px; padding:12px; font-size:13px; line-height:1.5; }
+  .soon { opacity:.55; }
+  .badge { display:inline-block; background:#ff4d8d; color:#fff; font-size:11px; padding:3px 8px; border-radius:999px; vertical-align:middle; }
+  .status { font-size:14px; margin-top:10px; }
+  meter { width:100%; height:10px; }
+</style>
+</head>
+<body>
+  <h1>Voice-Changer-Beta-Android <span class="badge">v1</span></h1>
+  <p class="sub">Real-time, modal HP + headset. Cowo ke cewe, natural, bukan chipmunk.</p>
+
+  <div class="card">
+    <div class="preset" id="presets">
+      <button data-pitch="2" data-formant="0.5">Via — Kalem Alus +2</button>
+      <button data-pitch="4" data-formant="1" class="active">Naila — Natural +4</button>
+      <button data-pitch="3" data-formant="0.5">Sinta — Lembut +3</button>
+      <button data-pitch="7" data-formant="2">Rara — Anime +7</button>
+      <button data-pitch="5" data-formant="1">Kirana — Manja +5</button>
+      <button data-pitch="-3" data-formant="-1">Cowok Deep -3</button>
+      <button data-pitch="0" data-formant="0">Normal</button>
+    </div>
+
+    <label>Pitch: <span class="val" id="pitchVal">+4 semitone</span></label>
+    <input type="range" id="pitch" min="-12" max="12" step="1" value="4">
+
+    <label>Formant / Timbre: <span class="val" id="formantVal">+1</span></label>
+    <input type="range" id="formant" min="-3" max="3" step="0.5" value="1">
+
+    <label>Volume output: <span class="val" id="volVal">80%</span></label>
+    <input type="range" id="vol" min="0" max="100" value="80">
+
+    <h3 style="margin:18px 0 4px; font-size:15px">Setting tambahan</h3>
+    <label>Mic gain: <span class="val" id="micGainVal">100%</span></label>
+    <input type="range" id="micGain" min="50" max="150" value="100">
+    <label>Bass: <span class="val" id="bassVal">0 dB</span></label>
+    <input type="range" id="bass" min="-6" max="6" step="1" value="0">
+    <label>Treble / jernih: <span class="val" id="trebleVal">+2 dB</span></label>
+    <input type="range" id="treble" min="-6" max="6" step="1" value="2">
+    <label>Noise gate: <span class="val" id="gateVal">Ringan</span></label>
+    <input type="range" id="gate" min="0" max="2" step="1" value="1">
+    <label>Echo / reverb: <span class="val" id="echoVal">0%</span></label>
+    <input type="range" id="echo" min="0" max="50" value="0">
+    <label>Kecepatan bicara: <span class="val" id="speedVal">1.00x</span></label>
+    <input type="range" id="speed" min="0.9" max="1.1" step="0.05" value="1">
+    <div style="font-size:12px;color:#9a9ab0;margin-top:4px">Kecepatan bicara: untuk clip mode, belum ngaruh di live.</div>
+
+    <label><input type="checkbox" id="monitor" checked> Monitor lewat headset (wajib headset, jangan speaker)</label>
+
+    <div style="margin-top:16px">
+      <button class="primary" id="startBtn">🎙️ Mulai Voice Changer</button>
+      <div class="status" id="status">Belum jalan. Izinin mic pas diminta.</div>
+      <meter id="level" min="0" max="1" value="0"></meter>
+    </div>
+  </div>
+
+  <div class="card warn">
+    <b>Jujur soal Android:</b> aplikasi web / HP tidak bisa jadi mic system-wide untuk MLBB di 1 HP yang sama.
+    Pakai <b>Mode 2 HP + kabel AUX</b> untuk MLBB, atau <b>Mode Party Voice</b> (Discord / Pinch).
+    Detail ada di README. Jangan pakai speaker — feedback.
+  </div>
+
+  <div class="card soon">
+    <h3 style="margin:0 0 6px">VTuber / Live Cam <span class="badge">Coming Soon</span></h3>
+    <p style="margin:0; color:#9a9ab0; font-size:14px">Karakter animasi yang gerak mengikuti muka + suara pengguna, untuk live TikTok / IG. Masih coming soon, fokus v1 ini voice changer dulu.</p>
+  </div>
+
+<script>
+let mic, pitchShift, hpFilter, presence, gain, analyser, meter;
+let micGainNode, bassFilter, trebleFilter, gateNode, echoNode;
+let running = false;
+let currentPitch = 4;
+
+const pitchEl = document.getElementById('pitch');
+const formantEl = document.getElementById('formant');
+const volEl = document.getElementById('vol');
+const startBtn = document.getElementById('startBtn');
+const statusEl = document.getElementById('status');
+const levelEl = document.getElementById('level');
+
+function fmtPitch(v){ return (v>0?'+':'')+v+' semitone'; }
+function applySettings(){
+  currentPitch = parseInt(pitchEl.value, 10);
+  document.getElementById('pitchVal').textContent = fmtPitch(currentPitch);
+  document.getElementById('formantVal').textContent = formantEl.value;
+  document.getElementById('volVal').textContent = volEl.value + '%';
+  const mg=document.getElementById('micGain'); if(mg) document.getElementById('micGainVal').textContent = mg.value + '%';
+  const bs=document.getElementById('bass'); if(bs) document.getElementById('bassVal').textContent = (bs.value>0?'+':'')+bs.value+' dB';
+  const tr=document.getElementById('treble'); if(tr) document.getElementById('trebleVal').textContent = (tr.value>0?'+':'')+tr.value+' dB';
+  const gt=document.getElementById('gate'); if(gt) document.getElementById('gateVal').textContent = ['Mati','Ringan','Kuat'][parseInt(gt.value,10)];
+  const ec=document.getElementById('echo'); if(ec) document.getElementById('echoVal').textContent = ec.value + '%';
+  const sp=document.getElementById('speed'); if(sp) document.getElementById('speedVal').textContent = parseFloat(sp.value).toFixed(2)+'x';
+  if (pitchShift) {
+    pitchShift.pitch = currentPitch;
+    // Formant approx: shift high-pass + presence based on formant value
+    const f = parseFloat(formantEl.value);
+    hpFilter.frequency.value = 120 + f * 60;
+    presence.gain.value = 2 + f * 2;
+  }
+  if (gain) gain.volume.value = Tone.gainToDb(parseInt(volEl.value,10)/100);
+  const mgv=document.getElementById('micGain'); if (micGainNode && mgv) micGainNode.gain.value = parseInt(mgv.value,10)/100;
+  const bsv=document.getElementById('bass'); if (bassFilter && bsv) bassFilter.gain.value = parseInt(bsv.value,10);
+  const trv=document.getElementById('treble'); if (trebleFilter && trv) trebleFilter.gain.value = parseInt(trv.value,10);
+  const gtv=document.getElementById('gate'); if (gateNode && gtv) gateNode.threshold.value = [-100, -50, -35][parseInt(gtv.value,10)];
+  const ecv=document.getElementById('echo'); if (echoNode && ecv) echoNode.wet.value = (parseInt(ecv.value,10)/100) * 0.6;
+  document.querySelectorAll('#presets button').forEach(b=>{
+    b.classList.toggle('active', parseInt(b.dataset.pitch,10)===currentPitch);
+  });
+}
+pitchEl.addEventListener('input', applySettings);
+formantEl.addEventListener('input', applySettings);
+volEl.addEventListener('input', applySettings);
+['micGain','bass','treble','gate','echo','speed'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input', applySettings); });
+document.querySelectorAll('#presets button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    pitchEl.value = b.dataset.pitch;
+    formantEl.value = b.dataset.formant;
+    applySettings();
+  });
+});
+
+startBtn.addEventListener('click', async ()=>{
+  if (running) {
+    // stop
+    try { mic.close(); } catch(e){}
+    try { await Tone.getContext().close(); } catch(e){}
+    running = false;
+    startBtn.textContent = '🎙️ Mulai Voice Changer';
+    startBtn.classList.remove('stop');
+    statusEl.textContent = 'Berhenti.';
+    return;
+  }
+  try {
+    await Tone.start();
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: true, autoGainControl: false }
+    });
+    mic = new Tone.UserMedia();
+    await mic.open();
+    // Chain: mic -> micGain -> gate -> highpass -> pitchShift -> bass -> presence -> treble -> echo -> gain -> destination
+    micGainNode = new Tone.Gain(1);
+    gateNode = new Tone.Gate(-50, 0.05, 0.1);
+    hpFilter = new Tone.Filter(180, 'highpass');
+    pitchShift = new Tone.PitchShift({ pitch: currentPitch, windowSize: 0.1, delayTime: 0, feedback: 0, wet: 1 });
+    bassFilter = new Tone.Filter(200, 'lowshelf');
+    bassFilter.gain.value = 0;
+    presence = new Tone.Filter(3500, 'peaking');
+    presence.Q.value = 1; presence.gain.value = 4;
+    trebleFilter = new Tone.Filter(4000, 'highshelf');
+    trebleFilter.gain.value = 2;
+    echoNode = new Tone.FeedbackDelay('8n', 0.3);
+    echoNode.wet.value = 0;
+    gain = new Tone.Gain(0.8);
+    analyser = new Tone.Analyser('fft', 32);
+    mic.connect(micGainNode);
+    micGainNode.connect(gateNode);
+    gateNode.connect(hpFilter);
+    hpFilter.connect(pitchShift);
+    pitchShift.connect(bassFilter);
+    bassFilter.connect(presence);
+    presence.connect(trebleFilter);
+    trebleFilter.connect(echoNode);
+    echoNode.connect(gain);
+    gain.connect(analyser);
+    if (document.getElementById('monitor').checked) {
+      analyser.toDestination();
+    }
+    applySettings();
+    running = true;
+    startBtn.textContent = '■ Berhenti';
+    startBtn.classList.add('stop');
+    statusEl.textContent = 'Jalan. berbicara sekarang — dengarkan lewat headset. Pitch ' + fmtPitch(currentPitch) + '.';
+    // level meter loop
+    (function loop(){
+      if (!running) { levelEl.value = 0; return; }
+      const vals = analyser.getValue();
+      let max = 0;
+      for (let i=0;i<vals.length;i++) max = Math.max(max, (vals[i]+100)/100);
+      levelEl.value = Math.min(1, Math.max(0, max));
+      requestAnimationFrame(loop);
+    })();
+  } catch(err) {
+    statusEl.textContent = 'Gagal akses mic: ' + err.message + ' — pastiin izinin mic dan pakai Chrome di HP.';
+  }
+});
+applySettings();
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(function () {});
+}
+</script>
+</body>
+</html>
