@@ -1,0 +1,26 @@
+# Build Android dan Gradle
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+*.ap_
+
+# File lokal Android Studio
+local.properties
+*.jks
+*.keystore
+
+# File hasil build
+*.class
+*.log
+
+# File sistem operasi
+.DS_Store
+Thumbs.db
